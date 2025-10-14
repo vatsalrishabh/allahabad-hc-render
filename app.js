@@ -22,8 +22,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from public directory and use admin.html as default
-app.use(express.static('public', { index: 'admin.html' }));
+// Serve static files from public directory and use index.html as default
+app.use(express.static('public', { index: 'index.html' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -37,6 +37,63 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+
+// API index route for discoverability
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Allahabad HC Updates API',
+    endpoints: {
+      root: '/',
+      health: '/health',
+      status: '/api/status',
+      monitoring: {
+        start: '/api/monitoring/start',
+        stop: '/api/monitoring/stop',
+        run: '/api/monitoring/run',
+        schedule: '/api/monitoring/schedule'
+      },
+      cases_core: {
+        list: '/api/cases',
+        get_by_case_number: '/api/cases/:caseNumber',
+        add: '/api/cases/add',
+        delete: '/api/cases/:caseNumber'
+      },
+      test: {
+        whatsapp: '/api/test/whatsapp'
+      },
+      admin: {
+        users: {
+          list: '/api/admin/users',
+          get: '/api/admin/users/:id',
+          create: '/api/admin/users',
+          update: '/api/admin/users/:id',
+          delete: '/api/admin/users/:id'
+        },
+        cases: {
+          list: '/api/admin/cases',
+          get: '/api/admin/cases/:id',
+          create: '/api/admin/cases',
+          refresh: '/api/admin/cases/:id/refresh',
+          delete: '/api/admin/cases/:id'
+        },
+        subscriptions: {
+          list: '/api/admin/subscriptions',
+          create: '/api/admin/subscriptions',
+          delete: '/api/admin/subscriptions/:id'
+        },
+        cino_numbers: {
+          list_all: '/api/admin/cino-numbers',
+          get_by_cino: '/api/admin/cino-numbers/:cino',
+          add_number: '/api/admin/cino-numbers/:cino/numbers',
+          update_number: '/api/admin/cino-numbers/:cino/numbers',
+          delete_number: '/api/admin/cino-numbers/:cino/numbers',
+          send_whatsapp: '/api/admin/cino-numbers/:cino/send'
+        }
+      }
+    }
+  });
+});
 
 // Database connection
 const connectDatabase = async () => {
