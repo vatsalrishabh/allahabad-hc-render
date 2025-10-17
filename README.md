@@ -321,5 +321,6 @@ For support and questions:
 
 ## Disclaimer
 
-This tool is for educational and informational purposes. Ensure compliance with the Allahabad High Court's terms of service and applicable laws when using this monitoring service.#   a l l a h a b a d - h c - r e n d e r  
+This tool is for educational and informational purposes. Ensure compliance with the Allahabad High Court's terms of service and applicable laws when using this monitoring service.#   a l l a h a b a d - h c - r e n d e r 
+ 
  

@@ -115,6 +115,69 @@ router.delete('/cino-numbers/:cino/numbers', async (req, res) => {
 });
 
 /**
+ * @route POST /api/admin/cino-numbers
+ * @desc Create or replace CINO mapping with full numbers array
+ */
+router.post('/cino-numbers', async (req, res) => {
+  try {
+    const { cino, numbers } = req.body;
+    if (!cino || !Array.isArray(numbers)) {
+      return res.status(400).json({ success: false, message: 'cino and numbers[] are required' });
+    }
+    const unique = [...new Set(numbers.map(n => String(n)))];
+    const doc = await CinoNumbers.findOneAndUpdate(
+      { cino },
+      { cino, numbers: unique },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, data: doc });
+  } catch (error) {
+    logger.error('Error creating cino-numbers mapping:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to create mapping', error: error.message });
+  }
+});
+
+/**
+ * @route PUT /api/admin/cino-numbers/:cino
+ * @desc Replace numbers array for a specific CINO mapping
+ */
+router.put('/cino-numbers/:cino', async (req, res) => {
+  try {
+    const { cino } = req.params;
+    const { numbers } = req.body;
+    if (!Array.isArray(numbers)) {
+      return res.status(400).json({ success: false, message: 'numbers[] is required' });
+    }
+    const unique = [...new Set(numbers.map(n => String(n)))];
+    const doc = await CinoNumbers.findOneAndUpdate(
+      { cino },
+      { numbers: unique },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ success: false, message: 'CINO mapping not found' });
+    res.json({ success: true, data: doc });
+  } catch (error) {
+    logger.error('Error replacing numbers for CINO:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to replace numbers', error: error.message });
+  }
+});
+
+/**
+ * @route DELETE /api/admin/cino-numbers/:cino
+ * @desc Delete CINO mapping
+ */
+router.delete('/cino-numbers/:cino', async (req, res) => {
+  try {
+    const { cino } = req.params;
+    const result = await CinoNumbers.deleteOne({ cino });
+    res.json({ success: true, data: { deleted: result.deletedCount } });
+  } catch (error) {
+    logger.error('Error deleting CINO mapping:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to delete CINO mapping', error: error.message });
+  }
+});
+
+/**
  * @route POST /api/admin/cino-numbers/:cino/send
  * @desc Send WhatsApp message for a case to all numbers mapped to CINO
  */
@@ -457,7 +520,7 @@ router.get('/cases/:id', async (req, res) => {
  */
 router.post('/cases', async (req, res) => {
   try {
-    const { cino } = req.body;
+    const { cino, numbers } = req.body;
 
     if (!cino) {
       return res.status(400).json({
@@ -491,6 +554,20 @@ router.post('/cases', async (req, res) => {
     const caseDoc = new Case(caseData);
     caseDoc.dataHash = caseDoc.generateDataHash();
     await caseDoc.save();
+
+    // Optionally store numbers for this CINO
+    if (Array.isArray(numbers) && numbers.length > 0) {
+      try {
+        const unique = [...new Set(numbers.map(n => String(n)))];
+        await CinoNumbers.findOneAndUpdate(
+          { cino },
+          { cino, numbers: unique },
+          { upsert: true }
+        );
+      } catch (err) {
+        logger.warn(`Failed to save CINO numbers for ${cino}: ${err.message}`);
+      }
+    }
     
     logger.info(`New case added via admin: ${cino}`);
 
