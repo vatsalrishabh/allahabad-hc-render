@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const logger = require('./utils/logger');
+const schedulerService = require('./services/schedulerService');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.get('/api', (req, res) => {
       { method: 'PUT', path: '/api/admin/cino-numbers/:cino/numbers' },
       { method: 'DELETE', path: '/api/admin/cino-numbers/:cino/numbers' },
       { method: 'POST', path: '/api/admin/cino-numbers/:cino/send' },
+      { method: 'POST', path: '/api/admin/cino-numbers/:id/fetch-and-send' },
     ],
   });
 });
@@ -88,6 +90,9 @@ async function start() {
   try {
     await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 2000 });
     logger.info('MongoDB connected');
+    
+    // Initialize scheduled tasks
+    schedulerService.initScheduledTasks();
   } catch (err) {
     logger.warn(`MongoDB connection failed: ${err.message}`);
   }

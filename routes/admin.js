@@ -178,6 +178,76 @@ router.delete('/cino-numbers/:cino', async (req, res) => {
 });
 
 /**
+ * @route POST /api/admin/cino-numbers/:id/fetch-and-send
+ * @desc Fetch case data by CINO and send WhatsApp to all associated numbers
+ */
+router.post('/cino-numbers/:id/fetch-and-send', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the CINO mapping by ID
+    const cinoMapping = await CinoNumbers.findById(id);
+    if (!cinoMapping) {
+      return res.status(404).json({ success: false, message: 'CINO mapping not found' });
+    }
+    
+    const { cino, numbers } = cinoMapping;
+    if (!numbers || numbers.length === 0) {
+      return res.status(400).json({ success: false, message: 'No numbers associated with this CINO' });
+    }
+    
+    // Fetch latest case data from API
+    logger.info(`Fetching case data for CINO: ${cino}`);
+    const caseData = await apiService.fetchCaseData(cino);
+    if (!caseData) {
+      return res.status(404).json({ success: false, message: 'Case data not found or API error' });
+    }
+    
+    // Update or create case in database
+    await Case.findOneAndUpdate(
+      { cino },
+      { 
+        ...caseData,
+        lastUpdated: new Date()
+      },
+      { upsert: true, new: true }
+    );
+    
+    // Prepare WhatsApp message
+    const message = `
+*Case Update: ${caseData.caseTitle || cino}*
+Status: ${caseData.caseStatus || 'N/A'}
+Next Hearing: ${caseData.nextHearingDate ? new Date(caseData.nextHearingDate).toLocaleDateString('en-IN') : 'Not scheduled'}
+Last Order: ${caseData.lastOrder || 'N/A'}
+    `.trim();
+    
+    // Send WhatsApp message to all numbers
+    const sendResults = [];
+    for (const number of numbers) {
+      try {
+        const result = await whatsappService.sendMessage(number, message);
+        sendResults.push({ number, success: true, result });
+      } catch (err) {
+        logger.error(`Failed to send WhatsApp to ${number}:`, err.message);
+        sendResults.push({ number, success: false, error: err.message });
+      }
+    }
+    
+    const successCount = sendResults.filter(r => r.success).length;
+    
+    res.json({ 
+      success: true, 
+      message: `Case data fetched and sent to ${successCount}/${numbers.length} numbers`,
+      caseData,
+      sendResults
+    });
+  } catch (error) {
+    logger.error('Error in fetch-and-send:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch and send', error: error.message });
+  }
+});
+
+/**
  * @route POST /api/admin/cino-numbers/:cino/send
  * @desc Send WhatsApp message for a case to all numbers mapped to CINO
  */

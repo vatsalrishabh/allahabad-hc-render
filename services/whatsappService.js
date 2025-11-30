@@ -167,7 +167,7 @@ class WhatsAppService {
 
   /**
    * Send WhatsApp message to multiple numbers
-   * @param {Array} numbers - Array of recipient phone numbers
+   * @param {Array|string} numbers - Array of recipient phone numbers or single number
    * @param {string} message - Message text
    * @returns {Promise<Object>} API response
    */
@@ -176,14 +176,22 @@ class WhatsAppService {
       throw new Error('WhatsApp API key not configured');
     }
 
-    if (!numbers || numbers.length === 0) {
+    if (!numbers) {
       logger.warn('No recipient numbers provided');
       return { success: false, error: 'No recipients' };
     }
 
     try {
+      // Ensure numbers is an array
+      const numbersArray = Array.isArray(numbers) ? numbers : [numbers];
+      
+      if (numbersArray.length === 0) {
+        logger.warn('Empty recipients array');
+        return { success: false, error: 'No recipients' };
+      }
+      
       // Clean and validate phone numbers
-      const cleanNumbers = numbers.map(number => this.validatePhoneNumber(number));
+      const cleanNumbers = numbersArray.map(number => this.validatePhoneNumber(number));
       
       const response = await axios.post(
         this.apiUrl,

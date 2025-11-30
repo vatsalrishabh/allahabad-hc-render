@@ -5,8 +5,7 @@ const caseSchema = new mongoose.Schema({
   cino: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   cnr: {
     type: String,
